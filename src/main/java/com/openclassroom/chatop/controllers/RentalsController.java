@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.openclassroom.chatop.models.Rentals;
+import com.openclassroom.chatop.entity.Rentals;
 import com.openclassroom.chatop.services.RentalsService;
 
 @RestController

@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.openclassroom.chatop.models.Messages;
+import com.openclassroom.chatop.entity.Messages;
 import com.openclassroom.chatop.repository.MessagesRepository;
 
 @Service

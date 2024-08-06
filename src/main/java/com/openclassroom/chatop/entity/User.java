@@ -1,4 +1,4 @@
-package com.openclassroom.chatop.models;
+package com.openclassroom.chatop.entity;
 
 import java.time.LocalDateTime;
 import jakarta.persistence.Column;

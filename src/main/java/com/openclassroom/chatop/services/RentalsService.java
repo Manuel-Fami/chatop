@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.openclassroom.chatop.models.Rentals;
+import com.openclassroom.chatop.entity.Rentals;
 import com.openclassroom.chatop.repository.RentalsRepository;
 
 @Service
