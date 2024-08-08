@@ -1,10 +1,10 @@
-package com.openclassroom.chatop.models;
+// package com.openclassroom.chatop.models;
 
-import lombok.Data;
+// import lombok.Data;
 
-@Data
-public class UserRegistrationDTO {
-    private String name;
-    private String email;
-    private String password;
-}
+// @Data
+// public class UserRegistrationDTO {
+//     private String name;
+//     private String email;
+//     private String password;
+// }
