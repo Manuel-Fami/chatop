@@ -3,10 +3,10 @@ package com.openclassroom.chatop.entity;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Set;
-import java.util.stream.Collectors;
+// import java.util.Set;
+// import java.util.stream.Collectors;
 
-import org.springframework.security.core.GrantedAuthority;
+// import org.springframework.security.core.GrantedAuthority;
 
 // import org.springframework.security.core.GrantedAuthority;
 
@@ -33,6 +33,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
     private String password;
+    private boolean enabled;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -61,8 +62,6 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
-    private VerificationToken verificationToken;
-
-    
+    private VerificationToken verificationToken;  
 
 }
