@@ -1,19 +1,19 @@
 package com.openclassroom.chatop.configuration;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-// import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+
+import com.openclassroom.chatop.services.CustomUserDetailsService;
+import com.openclassroom.chatop.services.JwtService;
 
 @Configuration
 @EnableWebSecurity
@@ -28,46 +28,54 @@ public class SpringSecurityConfig {
         "/swagger-ui/index.html/**"
     };
 
-    @Autowired
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtService jwtService;
+    private final CustomUserDetailsService customUserDetailsService;
+
+    public SpringSecurityConfig(JwtService jwtService, CustomUserDetailsService customUserDetailsService, AuthenticationConfiguration authenticationConfiguration) {
+        this.jwtService = jwtService;
+        this.customUserDetailsService = customUserDetailsService;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(authenticationManager(http), jwtService);
+        // Définit l'URL à traiter par le filtre d'authentification JWT.
+        jwtAuthenticationFilter.setFilterProcessesUrl("/api/auth/login");
+
+        http
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/me", "/api/auth/verify").permitAll()
+                .requestMatchers(WHITE_LIST_SWAGGER_URL).permitAll()
+                .anyRequest().authenticated()
+            )
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+
+        // Ajoute le filtre d'authentification JWT à la chaîne de filtres de sécurité.
+        http.addFilter(jwtAuthenticationFilter);
+        // Ajoute le filtre d'autorisation JWT avant le filtre d'authentification JWT dans la chaîne de filtres.
+        http.addFilterBefore(new JwtAuthorizationFilter(jwtService, customUserDetailsService), JwtAuthenticationFilter.class);
+
+        return http.build();
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    
-    @SuppressWarnings("removal")
+
     @Bean
-    public AuthenticationManager authenticationManager(HttpSecurity http, PasswordEncoder passwordEncoder, UserDetailsService userDetailsService) throws Exception {
-        return http.getSharedObject(AuthenticationManagerBuilder.class)
-                .userDetailsService(userDetailsService)
-                .passwordEncoder(passwordEncoder)
-                .and()
-                .build();
+    // public AuthenticationManager authenticationManager() throws Exception {
+    //     return authenticationConfiguration.getAuthenticationManager();
+    // }
+    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+        return http.getSharedObject(AuthenticationManagerBuilder.class).build();
     }
 
-    // @Bean
-    // public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-	// return http.authorizeHttpRequests(auth -> {
-	// 	auth.requestMatchers("/admin").hasRole("ADMIN");
-	// 	auth.requestMatchers("/user").hasRole("USER");
-	// 	auth.anyRequest().authenticated();
-	// }).formLogin(Customizer.withDefaults()).oauth2Login(Customizer.withDefaults()).build();
-	// }
-
-    @SuppressWarnings({ "deprecation", "removal" })
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf().disable()
-                .authorizeRequests().requestMatchers("/api/auth/login", "/api/auth/register", "/api/me", "/api/auth/verify").permitAll()
-                .requestMatchers(WHITE_LIST_SWAGGER_URL).permitAll()
-                .anyRequest().authenticated()
-                .and()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
-
-        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+    public void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(customUserDetailsService).passwordEncoder(passwordEncoder());
     }
 
+   
 }

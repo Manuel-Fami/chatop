@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class VerificationToken {
-    public VerificationToken(String token, User user,  Date expiryDate ) {
+    public VerificationToken(String token, UserEntity user,  Date expiryDate ) {
         this.token = token;
         this.user = user;
         this.expiryDate = expiryDate;
@@ -24,9 +24,9 @@ public class VerificationToken {
 
     private String token;
 
-    @OneToOne(targetEntity = User.class, fetch = FetchType.EAGER)
+    @OneToOne(targetEntity = UserEntity.class, fetch = FetchType.EAGER)
     @JoinColumn(nullable = false, name = "user_id")
-    private User user;
+    private UserEntity user;
 
     @Temporal(TemporalType.TIMESTAMP)
     private Date expiryDate;

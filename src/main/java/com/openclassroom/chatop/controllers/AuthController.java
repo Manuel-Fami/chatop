@@ -1,16 +1,17 @@
 package com.openclassroom.chatop.controllers;
 
-import java.util.Calendar;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Collections;
 import java.util.Date;
-import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,102 +19,113 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.openclassroom.chatop.configuration.JwtTokenUtil;
-import com.openclassroom.chatop.entity.User;
-import com.openclassroom.chatop.entity.VerificationToken;
-import com.openclassroom.chatop.models.AuthenticationRequest;
-import com.openclassroom.chatop.models.AuthenticationResponse;
-import com.openclassroom.chatop.models.UserDTO;
-import com.openclassroom.chatop.models.UserRegistrationDTO;
-import com.openclassroom.chatop.repository.UserRepository;
+// import com.openclassroom.chatop.configuration.JwtTokenUtil;
+import com.openclassroom.chatop.entity.UserEntity;
+import com.openclassroom.chatop.models.UserRequest;
+import com.openclassroom.chatop.models.UserResponse;
 import com.openclassroom.chatop.repository.VerificationTokenRepository;
+import com.openclassroom.chatop.services.JwtService;
 import com.openclassroom.chatop.services.UserService;
 
-import jakarta.servlet.http.HttpServletResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 
 @RestController
 @RequestMapping("/api")
 public class AuthController {
 
-    private static final Logger logger = Logger.getLogger(AuthController.class.getName());
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private JwtTokenUtil jwtTokenUtil;
-
-    @Autowired
-    private UserDetailsService userDetailsService;
-
-    @Autowired
-    private UserRepository userRepository;
-
+    // private static final Logger logger = Logger.getLogger(AuthController.class.getName());
+    
     @Autowired
     UserService userService;
+    JwtService jwtService;
+    private AuthenticationManager authenticationManager;
 
     @Autowired
     VerificationTokenRepository tokenRepository;
     
+    @Operation(summary = "Register a new user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User registered successfully",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(example = "{\"token\": \"jwt\"}"))),
+            @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content)
+    })
     @PostMapping("/auth/login")
-    public AuthenticationResponse createAuthenticationToken(@RequestBody AuthenticationRequest authenticationRequest, HttpServletResponse response) throws Exception {
-        
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getEmail(), authenticationRequest.getPassword()));
-        final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getEmail());
-        final String jwt = jwtTokenUtil.generateToken(userDetails.getUsername());
+    public String login(@RequestParam String email, @RequestParam String password) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, password)
+        );
 
-        // Logging the generated JWT
-        logger.info("Generated JWT: " + jwt);
-        
-        AuthenticationResponse authResponse = new AuthenticationResponse(jwt);
-
-        // Add the token to the response header
-        response.addHeader("Authorization", "Bearer " + jwt);
-        return authResponse;
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        return jwtService.generateToken(userDetails);
     }
 
+    @Operation(summary = "Register a new user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User registered successfully",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(example = "{\"token\": \"jwt\"}"))),
+            @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content)
+    })
     @PostMapping("/auth/register")
-    public User registerUser(@RequestBody UserRegistrationDTO registrationDTO) {
-        return userService.registerNewUser(registrationDTO);
+    public ResponseEntity<?> register(@RequestBody UserRequest userRequest) {
+        if (userRequest.getName() == null || userRequest.getEmail() == null || userRequest.getPassword() == null) {
+            return ResponseEntity.badRequest().body("{\"error\": \"Invalid input\"}");
+        }
+
+        UserEntity newUser = new UserEntity();
+        newUser.setName(userRequest.getName());
+        newUser.setEmail(userRequest.getEmail());
+        newUser.setPassword(userRequest.getPassword());
+        Date now = new Date();
+        newUser.setCreatedAt(now);
+        newUser.setUpdatedAt(now);
+
+        // UserEntity registeredUser = userService.register(newUser);
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(newUser.getEmail(), userRequest.getPassword())
+        );
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+        String token = jwtService.generateToken(userDetails);
+
+        return ResponseEntity.ok(Collections.singletonMap("token", token));
     }
 
-    @Transactional
-    @GetMapping("/auth/verify")
-    public String verifyAccount(@RequestParam("token") String token) {
-        VerificationToken verificationToken = tokenRepository.findByToken(token);
-
-        if (verificationToken == null) {
-            return "Invalid token";
-        }
-
-        User user = verificationToken.getUser();
-        Date expiryDate = verificationToken.getExpiryDate();
-        if (expiryDate == null) {
-            return "Token expiry date not set";
-        }
-
-        Calendar cal = Calendar.getInstance();
-        if ((expiryDate.getTime() - cal.getTime().getTime()) <= 0) {
-            return "Token expired";
-        }
-
-        user.setEnabled(true);
-        userRepository.save(user);
-
-        // Delete the token using its ID
-        tokenRepository.deleteById(verificationToken.getId());
-
-        // Check if the token is successfully deleted
-        boolean isDeleted = !tokenRepository.existsById(verificationToken.getId());
-        if (isDeleted) {
-            return "Account verified and token deleted successfully";
-        } else {
-            return "Account verified but token deletion failed";
-        }
-    }
-
+    @Operation(summary = "Get current authenticated user")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Current user details",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = UserEntity.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized", content = @Content)
+    })
     @GetMapping("/auth/me")
-    public UserDTO getAllUsers(@AuthenticationPrincipal UserDetails userDetails) {
-        return userService.findUserByEmail(userDetails.getUsername());
+    public UserResponse getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            throw new RuntimeException("Unauthorized");
+        }
+        UserEntity userEntity = userService.getCurrentUser(userDetails.getUsername());
+        return convertToDTO(userEntity);
+    }
+
+    private UserResponse convertToDTO(UserEntity userEntity) {
+        UserResponse userResponse = new UserResponse();
+        userResponse.setId(userEntity.getId());
+        userResponse.setName(userEntity.getName());
+        userResponse.setEmail(userEntity.getEmail());
+        userResponse.setCreatedAt(convertToLocalDate(userEntity.getCreatedAt()));
+        userResponse.setUpdatedAt(convertToLocalDate(userEntity.getUpdatedAt()));
+        return userResponse;
+    }
+
+    private LocalDate convertToLocalDate(Date date) {
+        return date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
     }
 }
