@@ -6,7 +6,7 @@ import java.util.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
+// import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -44,6 +44,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
             token = authorizationHeader.substring(7); // Extract token without "Bearer "
+
+            // Verify the token format
+            if (token.split("\\.").length != 3) {
+                logger.severe("Malformed JWT token: JWT should have exactly 2 periods : "+ token);
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Malformed JWT token");
+                return;
+            }
 
             try {
                 // Validate the token
