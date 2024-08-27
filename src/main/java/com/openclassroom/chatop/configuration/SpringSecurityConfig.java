@@ -9,7 +9,8 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+// import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+// import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 
 import com.openclassroom.chatop.services.CustomUserDetailsService;
@@ -30,32 +31,52 @@ public class SpringSecurityConfig {
 
     private final JwtService jwtService;
     private final CustomUserDetailsService customUserDetailsService;
+    @SuppressWarnings("unused")
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SpringSecurityConfig(JwtService jwtService, CustomUserDetailsService customUserDetailsService, AuthenticationConfiguration authenticationConfiguration) {
+
+    public SpringSecurityConfig(JwtService jwtService, CustomUserDetailsService customUserDetailsService, JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtService = jwtService;
         this.customUserDetailsService = customUserDetailsService;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(authenticationManager(http), jwtService);
-        // Définit l'URL à traiter par le filtre d'authentification JWT.
+    
+        AuthenticationManager authenticationManager = http.getSharedObject(AuthenticationConfiguration.class).getAuthenticationManager();
+
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(authenticationManager, jwtService);
         jwtAuthenticationFilter.setFilterProcessesUrl("/api/auth/login");
+
+        // JwtAuthorizationFilter jwtAuthorizationFilter = new JwtAuthorizationFilter(jwtService, customUserDetailsService, authenticationManager);
+
+        // Définit l'URL à traiter par le filtre d'authentification JWT.
+        // jwtAuthenticationFilter.setFilterProcessesUrl("/api/auth/login");
 
         http
             .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(authorize -> authorize
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/me", "/api/auth/verify").permitAll()
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/register").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(WHITE_LIST_SWAGGER_URL).permitAll()
+                .requestMatchers("/api/messages/**").authenticated()
+                .requestMatchers("/api/user/**").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
+            // Ajoute le filtre d'authentification JWT à la chaîne de filtres de sécurité.
+            http.addFilter(jwtAuthenticationFilter);
+            // Ajoute le filtre d'autorisation JWT avant le filtre d'authentification JWT dans la chaîne de filtres.
+            http.addFilterBefore(new JwtAuthorizationFilter(jwtService, customUserDetailsService, authenticationManager), JwtAuthenticationFilter.class);
 
-        // Ajoute le filtre d'authentification JWT à la chaîne de filtres de sécurité.
-        http.addFilter(jwtAuthenticationFilter);
-        // Ajoute le filtre d'autorisation JWT avant le filtre d'authentification JWT dans la chaîne de filtres.
-        http.addFilterBefore(new JwtAuthorizationFilter(jwtService, customUserDetailsService), JwtAuthenticationFilter.class);
+            
+            // // Ajoute le filtre d'authentification JWT à la chaîne de filtres de sécurité.
+            // http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            // // Ajoute le filtre d'autorisation JWT avant le filtre d'authentification JWT dans la chaîne de filtres.
+            // .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -65,17 +86,15 @@ public class SpringSecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    // public AuthenticationManager authenticationManager() throws Exception {
+    // @Bean
+    // public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
     //     return authenticationConfiguration.getAuthenticationManager();
     // }
-    public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        return http.getSharedObject(AuthenticationManagerBuilder.class).build();
-    }
 
-    public void configure(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(customUserDetailsService).passwordEncoder(passwordEncoder());
-    }
+
+    // public void configure(AuthenticationManagerBuilder auth) throws Exception {
+    //     auth.userDetailsService(customUserDetailsService).passwordEncoder(passwordEncoder());
+    // }
 
    
 }

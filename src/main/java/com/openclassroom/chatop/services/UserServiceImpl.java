@@ -1,6 +1,6 @@
 package com.openclassroom.chatop.services;
 
-import java.util.Optional;
+// import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,18 +27,18 @@ public class UserServiceImpl implements UserService{
         return userRepository.save(user);
     }
 
-    @Override
-    public UserEntity login(String email, String password) {
-        Optional<UserEntity> userOpt = Optional.ofNullable(userRepository.findByEmail(email));
-        if (userOpt.isPresent()) {
-            UserEntity user = userOpt.get();
-            if (passwordEncoder.matches(password, user.getPassword())) {
-                return user;
-            }
-        }
-        // Gérer l'échec de l'authentification
-        return null; // ou lancer une exception personnalisée
-    }
+    // @Override
+    // public UserEntity login(String email, String password) {
+    //     Optional<UserEntity> userOpt = Optional.ofNullable(userRepository.findByEmail(email));
+    //     if (userOpt.isPresent()) {
+    //         UserEntity user = userOpt.get();
+    //         if (passwordEncoder.matches(password, user.getPassword())) {
+    //             return user;
+    //         }
+    //     }
+    //     // Gérer l'échec de l'authentification
+    //     return null; // ou lancer une exception personnalisée
+    // }
 
     @Override
     public UserEntity getCurrentUser(String email) {
