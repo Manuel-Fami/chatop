@@ -43,9 +43,6 @@ public class Rentals {
     @Column(nullable = false)
     private String description;
 
-    // @Column(name = "owner_id", nullable = false)
-    // private Long ownerId;
-
     @ManyToOne
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
