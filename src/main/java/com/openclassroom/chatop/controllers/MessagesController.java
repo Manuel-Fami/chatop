@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.openclassroom.chatop.models.Messages;
+import com.openclassroom.chatop.entity.Messages;
 import com.openclassroom.chatop.services.MessagesService;
 
 @RestController

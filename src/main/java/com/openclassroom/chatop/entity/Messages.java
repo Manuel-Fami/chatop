@@ -1,4 +1,4 @@
-package com.openclassroom.chatop.models;
+package com.openclassroom.chatop.entity;
 
 import java.time.LocalDateTime;
 
@@ -18,37 +18,26 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "rentals")
+@Table(name = "messages")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Rentals {
+public class Messages {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
-
-    @Column(nullable = false)
-    private Double surface;
-
-    @Column(nullable = false)
-    private Double price;
-
-    @Column(nullable = false)
-    private String picture;
-
-    @Column(nullable = false)
-    private String description;
-
-    // @Column(name = "owner_id", nullable = false)
-    // private Long ownerId;
+    @ManyToOne
+    @JoinColumn(name = "rental_id", nullable = false)
+    private Rentals rental;
 
     @ManyToOne
-    @JoinColumn(name = "owner_id", nullable = false)
-    private User owner;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    @Column(nullable = false)
+    private String message;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
