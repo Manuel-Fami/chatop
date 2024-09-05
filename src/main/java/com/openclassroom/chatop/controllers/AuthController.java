@@ -1,130 +1,96 @@
 package com.openclassroom.chatop.controllers;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.logging.Logger;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.openclassroom.chatop.configuration.JwtTokenUtil;
-import com.openclassroom.chatop.entity.Rentals;
-import com.openclassroom.chatop.entity.User;
-import com.openclassroom.chatop.entity.VerificationToken;
-import com.openclassroom.chatop.models.AuthenticationRequest;
-import com.openclassroom.chatop.models.AuthenticationResponse;
-import com.openclassroom.chatop.models.UserDTO;
-import com.openclassroom.chatop.models.UserRegistrationDTO;
-import com.openclassroom.chatop.repository.UserRepository;
-import com.openclassroom.chatop.repository.VerificationTokenRepository;
-import com.openclassroom.chatop.services.UserService;
+import com.openclassroom.chatop.dto.JwtResponseDTO;
+import com.openclassroom.chatop.dto.LoginDTO;
+import com.openclassroom.chatop.dto.UserDTO;
+import com.openclassroom.chatop.dto.UserInfoDTO;
+import com.openclassroom.chatop.entities.User;
+import com.openclassroom.chatop.mapper.UserMapper;
+import com.openclassroom.chatop.services.AuthService;
+import com.openclassroom.chatop.services.JwtService;
 
-import jakarta.servlet.http.HttpServletResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/auth")
 public class AuthController {
 
-    private static final Logger logger = Logger.getLogger(AuthController.class.getName());
+    private final JwtService jwtService;
+	private final AuthService authService;
+	
+	public AuthController(JwtService jwtService, AuthService authService) {
+		this.jwtService = jwtService;
+		this.authService = authService;
+	}
+   
+    //@Valid existe le bon format défini en dto
+    @PostMapping("/register")
+	//Swagger
+	@Operation(summary = "Register a new user", description = "This operation registers a new user and returns a jwt token.")
+	@ApiResponses(value = {
+		@ApiResponse(responseCode = "200", description = "User successfully registered", 
+				content = @Content(mediaType = "application/json",
+				schema = @Schema(implementation = JwtResponseDTO.class))),
+		@ApiResponse(responseCode = "409", description = "Email already exists", content = @Content),
+		@ApiResponse(responseCode = "400", description = "Bad request", content = @Content),
+	})
+    public ResponseEntity<JwtResponseDTO> register(@Valid @RequestBody UserDTO userDTO) {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+	    User user = UserMapper.registerToUserEntity(userDTO); 
 
-    @Autowired
-    private JwtTokenUtil jwtTokenUtil;
+        User newUser = authService.register(user);	  
+	    String jwtToken = jwtService.generateToken(newUser); 
 
-    @Autowired
-    private UserDetailsService userDetailsService;
+	    return ResponseEntity.ok(new JwtResponseDTO(jwtToken));
+	}
 
-    @Autowired
-    private UserRepository userRepository;
+	@PostMapping("/login")
+	@Operation(summary = "Log in a user", description = "This operation logs in a user and returns a jwt token.")
+	@ApiResponses(value = { 
+		@ApiResponse(responseCode = "200", description = "User logged in successfully", 
+				content = @Content(mediaType = "application/json",
+				 schema = @Schema(implementation = JwtResponseDTO.class))),
+		@ApiResponse(responseCode = "400", description = "Invalid login credentials", content = @Content), 
+		@ApiResponse(responseCode = "404", description = "User not found", content = @Content), 
+ 	})
+	public ResponseEntity<JwtResponseDTO> login(@Valid @RequestBody LoginDTO loginDTO) {
 
-    @Autowired
-    UserService userService;
+	    User entity = UserMapper.loginToUserEntity(loginDTO); 
 
-    @Autowired
-    VerificationTokenRepository tokenRepository;
-    
-    @PostMapping("/auth/login")
-    public AuthenticationResponse createAuthenticationToken(@RequestBody AuthenticationRequest authenticationRequest, HttpServletResponse response) throws Exception {
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getEmail(), authenticationRequest.getPassword()));
-        final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getEmail());
-        final String jwt = jwtTokenUtil.generateToken(userDetails.getUsername());
+		User user = authService.login(entity);
 
-        // Logging the generated JWT
-        logger.info("Generated JWT: " + jwt);
-        
-        AuthenticationResponse authResponse = new AuthenticationResponse(jwt);
+		String jwtToken = jwtService.generateToken(user); 
+		
+		return ResponseEntity.ok(new JwtResponseDTO(jwtToken));
+	}
 
-        // Add the token to the response header
-        response.addHeader("Authorization", "Bearer " + jwt);
-        return authResponse;
-    }
+	@GetMapping("/me")
+	@Operation(summary = "Get current user", description = "This operation returns the details of the currently authenticated user.")
+	    @ApiResponses(value = { 
+	        @ApiResponse(responseCode = "200", description = "User details retrieved successfully", 
+	        		content = @Content(mediaType = "application/json",
+	                 schema = @Schema(implementation = UserInfoDTO.class))),
+	        @ApiResponse(responseCode = "400", description = "Bad request", content = @Content),
+	        @ApiResponse(responseCode = "401", description = "Invalid token", content = @Content), 
+	        @ApiResponse(responseCode = "403", description = "Unauthorized", content = @Content), 
+	 })
+	public ResponseEntity<UserInfoDTO> getUser() {
+		User user = authService.getUser();
 
-    @PostMapping("/auth/register")
-    public ResponseEntity<AuthenticationResponse>  registerUser(@RequestBody UserRegistrationDTO registrationDTO, HttpServletResponse response) {
-        User user = userService.registerNewUser(registrationDTO);
-        final String jwt = jwtTokenUtil.generateToken(user.getEmail());
-
-        // Logging the generated JWT
-        logger.info("Generated JWT: " + jwt);
-        
-        AuthenticationResponse authResponse = new AuthenticationResponse(jwt);
-
-        // Add the token to the response header
-        response.addHeader("Authorization", "Bearer " + jwt);
-        return  ResponseEntity.ok(authResponse);
-    }
-
-    // @Transactional
-    // @GetMapping("/auth/verify")
-    // public String verifyAccount(@RequestParam("token") String token) {
-    //     VerificationToken verificationToken = tokenRepository.findByToken(token);
-
-    //     if (verificationToken == null) {
-    //         return "Invalid token";
-    //     }
-
-    //     User user = verificationToken.getUser();
-    //     Date expiryDate = verificationToken.getExpiryDate();
-    //     if (expiryDate == null) {
-    //         return "Token expiry date not set";
-    //     }
-
-    //     Calendar cal = Calendar.getInstance();
-    //     if ((expiryDate.getTime() - cal.getTime().getTime()) <= 0) {
-    //         return "Token expired";
-    //     }
-
-    //     user.setEnabled(true);
-    //     userRepository.save(user);
-
-    //     // Delete the token using its ID
-    //     tokenRepository.deleteById(verificationToken.getId());
-
-    //     // Check if the token is successfully deleted
-    //     boolean isDeleted = !tokenRepository.existsById(verificationToken.getId());
-    //     if (isDeleted) {
-    //         return "Account verified and token deleted successfully";
-    //     } else {
-    //         return "Account verified but token deletion failed";
-    //     }
-    // }
-
-    @GetMapping("/auth/me")
-    public UserDTO getAllUsers(@AuthenticationPrincipal UserDetails userDetails) {
-        return userService.findUserByEmail(userDetails.getUsername());
-    }
+		UserInfoDTO userInfo = UserMapper.userEntityToUserInfoDto(user); 
+			 
+		return ResponseEntity.ok(userInfo);
+	} 
 }
