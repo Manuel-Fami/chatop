@@ -1,6 +1,10 @@
-package com.openclassroom.chatop.entity;
+package com.openclassroom.chatop.entities;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,9 +12,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -19,27 +22,33 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "rentals")
+//Pas besoin de créer les getters et setters
 @Getter
 @Setter
+//
 @AllArgsConstructor
 @NoArgsConstructor
-public class Rentals {
+public class Rental {
     @Id
+    // Auto-incrémentation
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Pas de valeur à null
     @Column(nullable = false)
     private String name;
 
     @Column(nullable = false)
-    private Double surface;
+    private BigDecimal surface;
 
     @Column(nullable = false)
-    private Double price;
+    private BigDecimal price;
 
     @Column(nullable = false)
     private String picture;
 
+    // Lob permet d'avoir une string plus longue que 255 caractères enregistré
+    @Lob
     @Column(nullable = false)
     private String description;
 
@@ -47,20 +56,12 @@ public class Rentals {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name="created_at")
+	@CreationTimestamp
+	private LocalDateTime createdAt;
+	 
+	@Column(name="updated_at")
+	@UpdateTimestamp
+	private LocalDateTime updatedAt;
 
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

@@ -1,83 +1,64 @@
 package com.openclassroom.chatop.controllers;
 
-import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.openclassroom.chatop.entity.Messages;
-import com.openclassroom.chatop.services.MessagesService;
+import com.openclassroom.chatop.dto.MessageDTO;
+import com.openclassroom.chatop.entities.Message;
+import com.openclassroom.chatop.entities.Rental;
+import com.openclassroom.chatop.entities.User;
+import com.openclassroom.chatop.response.MessageResponseHandler;
+import com.openclassroom.chatop.services.MessageService;
+import com.openclassroom.chatop.services.RentalsService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/messages")
 public class MessagesController {
+
     @Autowired
-    private MessagesService messagesService;
+    private MessageService messagesService;
 
-    // Endpoint pour obtenir tous les messages
-    @GetMapping
-    public ResponseEntity<List<Messages>> getAllMessages() {
-        List<Messages> messages = messagesService.findAllMessages();
-        return new ResponseEntity<>(messages, HttpStatus.OK);
-    }
+    @Autowired
+    private RentalsService rentalsService;
 
-    // Endpoint pour obtenir un message par son ID
-    @GetMapping("/{id}")
-    public ResponseEntity<Messages> getMessageById(@PathVariable Long id) {
-        Optional<Messages> message = messagesService.findMessageById(id);
-        return message.map(ResponseEntity::ok)
-                      .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
-    }
+   @PostMapping(path = "/messages")
+   @Operation(summary = "POST a message", description = "This operation creates a message and returns a message.")
+	@ApiResponses(value = {
+		     @ApiResponse(responseCode = "200", description = "Rental created", 
+		    		 content = @Content(mediaType = "application/json",
+	                 schema = @Schema(implementation = MessageResponseHandler.class))),
+		     @ApiResponse(responseCode = "400", description = "Bad request", content = @Content),
+		     @ApiResponse(responseCode = "401", description = "Invalid token", content = @Content), 
+		     @ApiResponse(responseCode = "403", description = "Unauthorized", content = @Content),
+		     @ApiResponse(responseCode = "404", description = "Rental not found", content = @Content),
+	})
+	public ResponseEntity<Object> create(@RequestBody @Valid MessageDTO messageDTO) throws Exception {	
+		
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		User currentUser = (User) authentication.getPrincipal();
+			
 
-    // Endpoint pour créer un nouveau message
-    @PostMapping
-    public ResponseEntity<Messages> createMessage(@RequestBody Messages message) {
-        Messages savedMessage = messagesService.saveMessage(message);
-        return new ResponseEntity<>(savedMessage, HttpStatus.CREATED);
-    }
-
-    // Endpoint pour mettre à jour un message existant
-    @PutMapping("/{id}")
-    public ResponseEntity<Messages> updateMessage(@PathVariable Long id, @RequestBody Messages message) {
-        if (!messagesService.findMessageById(id).isPresent()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-        message.setId(id);
-        Messages updatedMessage = messagesService.saveMessage(message);
-        return ResponseEntity.ok(updatedMessage);
-    }
-
-    // Endpoint pour supprimer un message par son ID
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteMessage(@PathVariable Long id) {
-        if (!messagesService.findMessageById(id).isPresent()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-        messagesService.deleteMessage(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    // Endpoint pour obtenir les messages par rentalId
-    @GetMapping("/rental/{rentalId}")
-    public ResponseEntity<List<Messages>> getMessagesByRentalId(@PathVariable Long rentalId) {
-        List<Messages> messages = messagesService.findMessagesByRentalId(rentalId);
-        return new ResponseEntity<>(messages, HttpStatus.OK);
-    }
-
-    // Endpoint pour obtenir les messages par userId
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Messages>> getMessagesByUserId(@PathVariable Long userId) {
-        List<Messages> messages = messagesService.findMessagesByUserId(userId);
-        return new ResponseEntity<>(messages, HttpStatus.OK);
-    }
+		Rental rental = rentalsService.getRentalById(messageDTO.getRental_id());
+			
+		Message message = new Message();
+		message.setMessage(messageDTO.getMessage());
+		message.setRental(rental);
+		message.setUser(currentUser);
+		
+		messagesService.createMessage(message);
+			
+		return ResponseEntity.ok().body(new MessageResponseHandler("message sent successfully !")); 	
+	}
 }
