@@ -33,8 +33,8 @@ public class MessagesController {
     @Autowired
     private RentalsService rentalsService;
 
-   @PostMapping(path = "/messages")
-   @Operation(summary = "POST a message", description = "This operation creates a message and returns a message.")
+   	@PostMapping(path = "/messages")
+   	@Operation(summary = "POST a message", description = "This operation creates a message and returns a message.")
 	@ApiResponses(value = {
 		     @ApiResponse(responseCode = "200", description = "Rental created", 
 		    		 content = @Content(mediaType = "application/json",

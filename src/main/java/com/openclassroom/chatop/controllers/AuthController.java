@@ -35,9 +35,7 @@ public class AuthController {
 		this.authService = authService;
 	}
    
-    //@Valid existe le bon format défini en dto
     @PostMapping("/register")
-	//Swagger
 	@Operation(summary = "Register a new user", description = "This operation registers a new user and returns a jwt token.")
 	@ApiResponses(value = {
 		@ApiResponse(responseCode = "200", description = "User successfully registered", 
@@ -48,10 +46,14 @@ public class AuthController {
 	})
     public ResponseEntity<JwtResponseDTO> register(@Valid @RequestBody UserDTO userDTO) {
 
-	    User user = UserMapper.registerToUserEntity(userDTO); 
+		// Tansformation de l'objet UserDTO en entity User
+	    User entity = UserMapper.registerToUserEntity(userDTO); 
 
-        User newUser = authService.register(user);	  
-	    String jwtToken = jwtService.generateToken(newUser); 
+		// Enregistrement du User en bdd
+        User user = authService.register(entity);	  
+
+		// Création d'un token associé
+	    String jwtToken = jwtService.generateToken(user); 
 
 	    return ResponseEntity.ok(new JwtResponseDTO(jwtToken));
 	}
@@ -61,16 +63,19 @@ public class AuthController {
 	@ApiResponses(value = { 
 		@ApiResponse(responseCode = "200", description = "User logged in successfully", 
 				content = @Content(mediaType = "application/json",
-				 schema = @Schema(implementation = JwtResponseDTO.class))),
+				schema = @Schema(implementation = JwtResponseDTO.class))),
 		@ApiResponse(responseCode = "400", description = "Invalid login credentials", content = @Content), 
 		@ApiResponse(responseCode = "404", description = "User not found", content = @Content), 
  	})
 	public ResponseEntity<JwtResponseDTO> login(@Valid @RequestBody LoginDTO loginDTO) {
 
+		// Tansformation de l'objet UserDTO en entity User
 	    User entity = UserMapper.loginToUserEntity(loginDTO); 
 
+		// Vérification du User
 		User user = authService.login(entity);
 
+		// Création d'un token associé
 		String jwtToken = jwtService.generateToken(user); 
 		
 		return ResponseEntity.ok(new JwtResponseDTO(jwtToken));
@@ -87,8 +92,11 @@ public class AuthController {
 	        @ApiResponse(responseCode = "403", description = "Unauthorized", content = @Content), 
 	 })
 	public ResponseEntity<UserInfoDTO> getUser() {
+
+		// Récupération du User avec Spring Security
 		User user = authService.getUser();
 
+		// Transformation de l'entity en objet DTO
 		UserInfoDTO userInfo = UserMapper.userEntityToUserInfoDto(user); 
 			 
 		return ResponseEntity.ok(userInfo);

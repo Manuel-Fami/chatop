@@ -28,15 +28,15 @@ public class SpringSecurityConfig {
 	@Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {     
 
-        System.out.println(" SPRING SECURITY !!!!!");
-
 		return http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                     .requestMatchers("/auth/register", "/auth/login", "/swagger-ui/*", "/v3/api-docs", "/v3/api-docs/*").permitAll() 
                     .anyRequest().authenticated()) 
+                // Vérification de l'utilisateur
                 .authenticationProvider(authenticationProvider)
+                // Gestion de l'authentification basé sur l'utilisateur. Le token est validé avant tout autre filtre
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)                
                 .build();        
     }

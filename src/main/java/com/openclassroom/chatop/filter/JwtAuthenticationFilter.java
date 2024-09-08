@@ -40,47 +40,53 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 		System.out.println("START FILTER !!!");
 
+		// Récupération de l'en-tête Authorization
 		String authHeader = request.getHeader("Authorization");
 		
-		 if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-	            filterChain.doFilter(request, response);
-	            return;
-	     }
-		 
-		 try {
-			 
-			 	String jwt = authHeader.substring(7);
-	            String userEmail = jwtService.extractUsername(jwt);
-	            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-	            if (userEmail != null && authentication == null) {
-	                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-
-	                if (jwtService.isTokenValid(jwt, userDetails)) {
-	                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-	                            userDetails,
-	                            null,
-	                            userDetails.getAuthorities()
-	                    );
-
-	                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-	                    SecurityContextHolder.getContext().setAuthentication(authToken);
-	                }
-	            }
-				System.out.println("END FILTER 2 !!!");
-
-	            filterChain.doFilter(request, response);
-	        } catch (Exception exception) {
-				
-				System.out.println("FILTER EXCEPTION !!!");
-
-	        	exception.printStackTrace();
-	            handlerExceptionResolver.resolveException(request, response, null, exception);
-	        }
-		
-			
-			System.out.println("END FILTER !!!");
+		if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+			filterChain.doFilter(request, response);
+			return;
 		}
+		 
+		try {
+			// Extraction et validation du JWT
+			String jwt = authHeader.substring(7);
+			String userEmail = jwtService.extractUsername(jwt);
+			
+			// Est ce que l'utilsateur est déjà authentifié ?
+			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+			// Pas encore authentifié
+			if (userEmail != null && authentication == null) {
+				// Chargement de l'utilisateur
+				UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+
+				// Vérification du token
+				if (jwtService.isTokenValid(jwt, userDetails)) {
+					// Création d'une interface d'authentification par Spring Security
+					UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+							userDetails,
+							null,
+							userDetails.getAuthorities()
+					);
+
+					// Ajoute le header "Bearer"
+					authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+					
+					// Stockage de l'authentification par Spring Security
+					SecurityContextHolder.getContext().setAuthentication(authToken);
+				}
+			}
+			filterChain.doFilter(request, response);
+
+		} catch (Exception exception) {
+			// Gestion des exceptions
+			exception.printStackTrace();
+			handlerExceptionResolver.resolveException(request, response, null, exception);
+		}
+			
+		System.out.println("END FILTER !!!");
+	}
     
     
     

@@ -22,10 +22,8 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "rentals")
-//Pas besoin de créer les getters et setters
 @Getter
 @Setter
-//
 @AllArgsConstructor
 @NoArgsConstructor
 public class Rental {
