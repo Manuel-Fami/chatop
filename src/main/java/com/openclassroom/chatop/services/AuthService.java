@@ -69,8 +69,11 @@ public class AuthService {
     }
 
     public User getUser() {
-        
+
+        // Récupération de l'autentification
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        
+        // Récupération de l'utilisateur
         User currentUser = (User) authentication.getPrincipal();
 
         return currentUser;
