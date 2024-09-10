@@ -32,7 +32,7 @@ public class ControllerExceptionHandler {
 	        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    // 
+    // Si certaines parties d'une requêtes multipart sont manquantes
     @ExceptionHandler(MissingServletRequestPartException.class)
 	 public ResponseEntity<Map<String, String>> handleMissingServletRequestPartException(MissingServletRequestPartException ex) {
 	        Map<String, String> response = new HashMap<>();

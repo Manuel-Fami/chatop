@@ -14,6 +14,7 @@ import com.openclassroom.chatop.filter.JwtAuthenticationFilter;
 
 
 @Configuration
+// Active les fonctionnalités de Spring Security
 @EnableWebSecurity
 public class SpringSecurityConfig {
 	 private final AuthenticationProvider authenticationProvider;

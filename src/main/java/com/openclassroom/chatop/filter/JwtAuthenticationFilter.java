@@ -34,11 +34,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             this.handlerExceptionResolver = handlerExceptionResolver;
     }
 
+	@SuppressWarnings("null")
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
-
-		System.out.println("START FILTER !!!");
 
 		// Récupération de l'en-tête Authorization
 		String authHeader = request.getHeader("Authorization");
@@ -83,12 +82,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			// Gestion des exceptions
 			exception.printStackTrace();
 			handlerExceptionResolver.resolveException(request, response, null, exception);
-		}
-			
-		System.out.println("END FILTER !!!");
+		}			
 	}
-    
-    
-    
-    
 }

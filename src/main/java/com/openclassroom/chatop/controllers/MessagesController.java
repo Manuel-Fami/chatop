@@ -49,7 +49,6 @@ public class MessagesController {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		User currentUser = (User) authentication.getPrincipal();
 			
-
 		Rental rental = rentalsService.getRentalById(messageDTO.getRental_id());
 			
 		Message message = new Message();

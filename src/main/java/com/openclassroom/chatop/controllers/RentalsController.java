@@ -39,6 +39,7 @@ public class RentalsController {
     @Autowired
     private RentalsService rentalsService;
     
+    @SuppressWarnings("null")
     @PostMapping(path = "/rentals", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE })
     @Operation(summary = "Create a new rental", description = "This operation creates a new rental and returns a message.")
 	@ApiResponses(value = {
@@ -64,7 +65,8 @@ public class RentalsController {
     if (!picture.getContentType().startsWith("image/")) {
         return ResponseEntity.badRequest().body("File is not an image");
     }
-        
+     
+    
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     User currentUser = (User) authentication.getPrincipal();
     
@@ -77,7 +79,8 @@ public class RentalsController {
 				
 	rentalsService.createRental(rental, picture);
         
-		return ResponseEntity.ok().body("Rental created !");
+	return ResponseEntity.ok().body("Rental created !");
+    
 	}
 
     @PutMapping(path = "/rentals/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
