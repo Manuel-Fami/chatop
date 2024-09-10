@@ -12,7 +12,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
+// import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -46,8 +46,8 @@ public class Rental {
     private String picture;
 
     // Lob permet d'avoir une string plus longue que 255 caractères enregistré
-    @Lob
-    @Column(nullable = false)
+    // @Lob
+    @Column(nullable = false, length = 500)
     private String description;
 
     @ManyToOne

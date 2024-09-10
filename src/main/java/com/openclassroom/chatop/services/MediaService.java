@@ -18,7 +18,8 @@ public class MediaService {
 		@Value("${image.upload-dir}")
 		private String uploadDir;
 
-		public String storePicture(MultipartFile picture) throws IOException {
+		@SuppressWarnings("null")
+        public String storePicture(MultipartFile picture) throws IOException {
 		
             String filename = StringUtils.cleanPath(picture.getOriginalFilename());
             String uniqueFilename = generateUniqueFilename(filename);
